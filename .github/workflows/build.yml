@@ -1,10 +1,9 @@
 name: Qt-GammaRay Builds
-on: [push]
+on: [push, pull_request, workflow_dispatch]
 
 jobs:
   GammaRay-x64:
-    runs-on: windows-2016
-    if: "startsWith(github.event.head_commit.message, '[build]')"
+    runs-on: windows-latest
     steps:
       - name: Install jom
         shell: powershell
