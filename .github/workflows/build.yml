@@ -4,7 +4,15 @@ on: [push, pull_request, workflow_dispatch]
 jobs:
   GammaRay-x64:
     runs-on: windows-latest
+    env:
+      CI_QT_VERSION: 5.15.2
+      CI_SEED: 1234567890  # cache buster
     steps:
+      - name: Enable Developer Command Prompt (Windows)
+        uses: ilammy/msvc-dev-cmd@v1.12.1
+        with:
+            sdk: "10.0.22621.0"
+            arch: amd64          
       - name: Install jom
         shell: powershell
         run: |
@@ -15,6 +23,18 @@ jobs:
           Get-ChildItem $(pwd)
           Get-ChildItem .\jom
           Get-PSDrive
+      - name: Check MSBuild and Qt
+        run: |
+          msbuild -version | Out-File -FilePath "$env:GITHUB_WORKSPACE\msbuild_version"
+          Get-Content -Path "$env:GITHUB_WORKSPACE\msbuild_version"
+          $env:CI_QT_VERSION | Out-File -FilePath "$env:GITHUB_WORKSPACE\qt_version"
+          $env:CI_SEED | Out-File -FilePath "$env:GITHUB_WORKSPACE\cache_seed"          
+      - name: Restore Qt cache
+        id: qt-cache
+        uses: actions/cache/restore@v3
+        with:
+          path: C:\Qt
+          key: ${{ github.job }}-qt-${{ hashFiles('msbuild_version', 'qt_version', 'cache_seed') }}           
       - name: Clone Qt 5.15.2
         shell: cmd
         run: |
@@ -26,18 +46,20 @@ jobs:
           cd C:\Qt\src\5.15.2\
           git submodule update --init --recursive
       - name: Clone latest Qt-GammaRay
+        if: steps.qt-cache.outputs.cache-hit != 'true'
         shell: cmd
         run: |
           @echo on
           C:
           cd C:\
           git clone https://github.com/KDAB/GammaRay.git
-      - name: Enable Developer Command Prompt (Windows)
-        uses: ilammy/msvc-dev-cmd@v1.12.1
+      - name: Save Qt cache
+        if: steps.qt-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v3
         with:
-            sdk: "10.0.22621.0"
-            arch: amd64          
-      - name: Build Qt 5.15.2 and Qt-GammaRay
+          path: C:\Qt
+          key: ${{ github.job }}-qt-${{ hashFiles('msbuild_version', 'qt_version', 'cache_seed') }}              
+      - name: Build Qt 5.15.2
         shell: cmd
         run: |
           @echo on
@@ -45,7 +67,6 @@ jobs:
           set _ROOT=C:\Qt\build\5.15.2
           set PATH=%_ROOT%\qtrepotools\bin;%_ROOT%\qtbase\bin;%_ROOT%\gnuwin32\bin;%PATH%
           set _ROOT=
-          set QMAKESPEC=win32-msvc
           mkdir C:\Qt\build\5.15.2\
           cd C:\Qt\build\5.15.2\
           call C:\Qt\src\5.15.2\configure.bat -release -nomake tests -nomake examples -qtnamespace QT -confirm-license -accessibility -opensource -platform win32-msvc -opengl desktop -prefix .\
@@ -59,7 +80,7 @@ jobs:
           cd C:\GammaRay\build\
           cmake -G "NMake Makefiles" "-DCMAKE_BUILD_TYPE=Release" "-DCMAKE_PREFIX_PATH=C:\Qt\build\5.15.2\qtbase\bin" "-DCMAKE_INSTALL_PREFIX=C:\artifacts" ..
           nmake
-          nmake install
+          nmake install          
       - name: Copy Qt DLLs
         shell: powershell
         run: |
