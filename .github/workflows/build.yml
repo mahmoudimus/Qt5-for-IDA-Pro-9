@@ -32,20 +32,23 @@ jobs:
           C:
           cd C:\
           git clone https://github.com/KDAB/GammaRay.git
+      - name: Enable Developer Command Prompt (Windows)
+        uses: ilammy/msvc-dev-cmd@v1.12.1
+        with:
+            sdk: "10.0.22621.0"
+            arch: amd64          
       - name: Build Qt 5.15.2 and Qt-GammaRay
         shell: cmd
         run: |
           @echo on
           C:
-          call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" amd64
           set _ROOT=C:\Qt\build\5.15.2
           set PATH=%_ROOT%\qtrepotools\bin;%_ROOT%\qtbase\bin;%_ROOT%\gnuwin32\bin;%PATH%
-          set QMAKESPEC=win64-msvc2019
           set _ROOT=
-
+          set QMAKESPEC=win32-msvc
           mkdir C:\Qt\build\5.15.2\
           cd C:\Qt\build\5.15.2\
-          call C:\Qt\src\5.15.2\configure.bat -release -nomake tests -nomake examples -qtnamespace QT -confirm-license -accessibility -opensource -platform win32-msvc2015 -opengl desktop -prefix .\
+          call C:\Qt\src\5.15.2\configure.bat -release -nomake tests -nomake examples -qtnamespace QT -confirm-license -accessibility -opensource -platform win32-msvc -opengl desktop -prefix .\
           
           cd C:\Qt\build\5.15.2\
           C:\jom\jom.exe -j%NUMBER_OF_PROCESSORS%
