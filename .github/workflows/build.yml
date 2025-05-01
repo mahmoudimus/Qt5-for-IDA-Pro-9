@@ -46,7 +46,7 @@ jobs:
         if: steps.qt-cache.outputs.cache-hit != 'true'
         uses: actions/checkout@v4
         with:
-          repository: https://code.qt.io/qt/qt5.git
+          repository: qt/qt5
           ref: v${{ env.CI_QT_VERSION }}
           fetch-depth: 1
           submodules: recursive
