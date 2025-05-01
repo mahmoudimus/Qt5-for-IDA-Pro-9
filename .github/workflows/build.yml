@@ -12,6 +12,7 @@ jobs:
       CI_QT_VERSION: 5.15.2
       IDA_VERSION: 8.4
       CI_SEED: 123456789  # cache buster
+      GITHUB_WORKSPACE: ${{ github.workspace }}
     steps:
       - name: Enable Developer Command Prompt (Windows)
         uses: ilammy/msvc-dev-cmd@v1.12.1
@@ -23,7 +24,7 @@ jobs:
       - name: Install jom
         shell: powershell
         run: |
-          Set-Location C:\
+          Set-Location $env:GITHUB_WORKSPACE
           Invoke-WebRequest 'http://download.qt.io/official_releases/jom/jom.zip' -OutFile .\jom.zip
           Expand-Archive .\jom.zip
           Remove-Item .\jom.zip
@@ -40,7 +41,7 @@ jobs:
         id: qt-cache
         uses: actions/cache/restore@v3
         with:
-          path: C:\Qt
+          path: ${{ github.workspace }}/Qt
           key: ${{ github.job }}-qt-${{ hashFiles('msbuild_version', 'qt_version', 'cache_seed') }}           
       - name: Clone Qt ${{ env.CI_QT_VERSION }}
         if: steps.qt-cache.outputs.cache-hit != 'true'
@@ -50,13 +51,13 @@ jobs:
           ref: v${{ env.CI_QT_VERSION }}
           fetch-depth: 1
           submodules: recursive
-          path: C:\Qt\src\${{ env.CI_QT_VERSION }}
+          path: ${{ github.workspace }}/Qt
       - name: Clone latest Qt-GammaRay
         if: steps.qt-cache.outputs.cache-hit != 'true'
         uses: actions/checkout@v4
         with:
           repository: KDAB/GammaRay
-          path: C:\GammaRay
+          path: ${{ github.workspace }}/GammaRay
           fetch-depth: 1
           submodules: recursive
       - name: Build Qt ${{ env.CI_QT_VERSION }}
@@ -64,46 +65,47 @@ jobs:
         shell: cmd
         run: |
           @echo on
-          C:
-          set _QT_BUILD_ROOT=C:\Qt\build\${{ env.CI_QT_VERSION }}
+          echo GITHUB_WORKSPACE=%GITHUB_WORKSPACE%
+          set _QT_BUILD_ROOT=%GITHUB_WORKSPACE%\Qt\build\${{ env.CI_QT_VERSION }}
           mkdir %_QT_BUILD_ROOT%\
           mkdir %_QT_BUILD_ROOT%\qtbase\          
           cd %_QT_BUILD_ROOT%
           set PATH=%_QT_BUILD_ROOT%\qtrepotools\bin;%_QT_BUILD_ROOT%\qtbase\bin;%_QT_BUILD_ROOT%\gnuwin32\bin;%PATH%
           REM See https://bugreports.qt.io/browse/QTBUG-71540 for Qt 5.15.2 build issues on Windows
-          call C:\Qt\src\${{ env.CI_QT_VERSION }}\configure.bat -release -nomake tests -nomake examples -qtnamespace QT -confirm-license -accessibility -opensource -platform win32-msvc -opengl desktop -prefix %_QT_BUILD_ROOT%\qtbase -c++std c++14 -- "QMAKE_CXXFLAGS+=/std:c++14"
+          call %GITHUB_WORKSPACE%\Qt\src\${{ env.CI_QT_VERSION }}\configure.bat -release -nomake tests -nomake examples -qtnamespace QT -confirm-license -accessibility -opensource -platform win32-msvc -opengl desktop -prefix %_QT_BUILD_ROOT%\qtbase -c++std c++14 -- "QMAKE_CXXFLAGS+=/std:c++14"
           cd %_QT_BUILD_ROOT%
-          C:\jom\jom.exe -j%NUMBER_OF_PROCESSORS%
-          C:\jom\jom.exe -j%NUMBER_OF_PROCESSORS% install
+          %GITHUB_WORKSPACE%\jom\jom.exe -j%NUMBER_OF_PROCESSORS%
+          %GITHUB_WORKSPACE%\jom\jom.exe -j%NUMBER_OF_PROCESSORS% install
       - name: Save Qt cache
         uses: actions/cache/save@v3
         if: steps.qt-cache.outputs.cache-hit != 'true'
         with:
-          path: C:\Qt
+          path: ${{ github.workspace }}/Qt
           key: ${{ github.job }}-qt-${{ hashFiles('msbuild_version', 'qt_version', 'cache_seed') }}          
       - name: Build Qt GammaRay
         shell: cmd
         run: |
           @echo on
-          C:
-          set _ROOT=C:\Qt\build\${{ env.CI_QT_VERSION }}
+          echo GITHUB_WORKSPACE=%GITHUB_WORKSPACE%
+          set _ROOT=%GITHUB_WORKSPACE%\Qt\build\${{ env.CI_QT_VERSION }}
           set PATH=%_ROOT%\qtrepotools\bin;%_ROOT%\qtbase\bin;%_ROOT%\gnuwin32\bin;%PATH%
-          set _ROOT=        
-          mkdir C:\artifacts\
-          mkdir C:\GammaRay\build\
-          cd C:\GammaRay\build\
-          cmake -G "NMake Makefiles" "-DCMAKE_BUILD_TYPE=Release" "-DCMAKE_PREFIX_PATH=C:\Qt\build\${{ env.CI_QT_VERSION }}\qtbase\bin" "-DCMAKE_INSTALL_PREFIX=C:\artifacts" "C:\GammaRay"
+          mkdir %GITHUB_WORKSPACE%\artifacts\
+          mkdir %GITHUB_WORKSPACE%\GammaRay\build\
+          cd %GITHUB_WORKSPACE%\GammaRay\build\
+          cmake -G "NMake Makefiles" "-DCMAKE_BUILD_TYPE=Release" "-DCMAKE_PREFIX_PATH=%_ROOT%\qtbase\bin" "-DCMAKE_INSTALL_PREFIX=%GITHUB_WORKSPACE%\artifacts" "%GITHUB_WORKSPACE%\GammaRay"
           nmake
           nmake install          
       - name: Copy Qt DLLs
         shell: powershell
         run: |
-          $env:Path = "C:\Qt\build\${{ env.CI_QT_VERSION }}\qtbase\bin;" + $env:Path
-          foreach ($_ in Get-ChildItem "C:\artifacts\bin" -Include *.exe,*.dll -Recurse) {
-              & "C:\Qt\build\${{ env.CI_QT_VERSION }}\qtbase\bin\bin\windeployqt.exe" --release $_
+          $qtPath = "$env:GITHUB_WORKSPACE\Qt\build\${{ env.CI_QT_VERSION }}"
+          Write-Host "Qt Path: $qtPath"
+          $env:Path = "$qtPath\qtbase\bin;" + $env:Path
+          foreach ($_ in Get-ChildItem "$env:GITHUB_WORKSPACE\artifacts\bin" -Include *.exe,*.dll -Recurse) {
+              & "$qtPath\qtbase\bin\windeployqt.exe" --release $_
           }
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: Qt-GammaRay-x64-for-IDA-${{ env.IDA_VERSION }}-Qt-${{ env.CI_QT_VERSION }}.zip
-          path: C:\artifacts
+          path: ${{ github.workspace }}/artifacts
