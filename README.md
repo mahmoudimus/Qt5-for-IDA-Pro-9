@@ -1,4 +1,4 @@
-# IDA PRO 7.0 patches for QT 5.6.0.
+# QT 5.15.2 Patches for IDA Pro 8.4+
 
 [Original QT README](README).
 
