@@ -73,7 +73,20 @@ jobs:
           set PATH=%_QT_BUILD_ROOT%\qtrepotools\bin;%_QT_BUILD_ROOT%\qtbase\bin;%_QT_BUILD_ROOT%\gnuwin32\bin;%PATH%
           set QMAKE_CXXFLAGS=/std:c++14
           REM See https://bugreports.qt.io/browse/QTBUG-71540 for Qt 5.15.2 build issues on Windows
-          call %GITHUB_WORKSPACE%\Qt\configure.bat "QMAKE_CXXFLAGS+=/std:c++14" -release -nomake tests -nomake examples -qtnamespace QT -confirm-license -accessibility -opensource -platform win32-msvc -opengl desktop -prefix %_QT_BUILD_ROOT%\qtbase -c++std c++14 
+          call %GITHUB_WORKSPACE%\Qt\configure.bat "QMAKE_CXXFLAGS+=/std:c++14" ^
+            -c++std c++14 ^
+            -release ^
+            -nomake tests ^
+            -nomake examples ^
+            -qtnamespace QT ^
+            -confirm-license ^
+            -accessibility ^
+            -opensource ^
+            -platform win32-msvc ^
+            -opengl desktop ^
+            -prefix %_QT_BUILD_ROOT%\qtbase ^
+            -skip qtdocgallery ^
+            -skip qtwebkit-examples
           cd %_QT_BUILD_ROOT%
           C:\jom\jom.exe -j%NUMBER_OF_PROCESSORS%
           C:\jom\jom.exe -j%NUMBER_OF_PROCESSORS% install
