@@ -36,6 +36,7 @@ jobs:
           path: C:\Qt
           key: ${{ github.job }}-qt-${{ hashFiles('msbuild_version', 'qt_version', 'cache_seed') }}           
       - name: Clone Qt 5.15.2
+        if: steps.qt-cache.outputs.cache-hit != 'true'
         shell: cmd
         run: |
           @echo on
@@ -67,10 +68,10 @@ jobs:
           set _ROOT=C:\Qt\build\5.15.2
           set PATH=%_ROOT%\qtrepotools\bin;%_ROOT%\qtbase\bin;%_ROOT%\gnuwin32\bin;%PATH%
           set _ROOT=
+          mkdir C:\Qt\artifacts\5.15.2
           mkdir C:\Qt\build\5.15.2\
           cd C:\Qt\build\5.15.2\
-          call C:\Qt\src\5.15.2\configure.bat -release -nomake tests -nomake examples -qtnamespace QT -confirm-license -accessibility -opensource -platform win32-msvc -opengl desktop -prefix .\
-          
+          call C:\Qt\src\5.15.2\configure.bat -release -nomake tests -nomake examples -qtnamespace QT -confirm-license -accessibility -opensource -platform win32-msvc -opengl desktop -prefix C:\Qt\artifacts\5.15.2
           cd C:\Qt\build\5.15.2\
           C:\jom\jom.exe -j%NUMBER_OF_PROCESSORS%
           C:\jom\jom.exe -j%NUMBER_OF_PROCESSORS% install
