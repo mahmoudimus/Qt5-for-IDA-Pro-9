@@ -102,6 +102,7 @@ jobs:
           submodules: recursive
       - name: Check GammaRay content
         if: steps.gamma-cache.outputs.cache-hit != 'true'
+        shell: cmd
         run: |
           @echo on
           echo GITHUB_WORKSPACE=%GITHUB_WORKSPACE%
