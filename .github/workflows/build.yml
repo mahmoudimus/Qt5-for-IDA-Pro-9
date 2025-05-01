@@ -120,8 +120,7 @@ jobs:
             -platform win32-msvc ^
             -opengl desktop ^
             -prefix %_QT_BUILD_ROOT%\qtbase ^
-            -skip qtdocgallery ^
-            -skip qtwebkit-examples
+            -skip qtdocgallery
           cd %_QT_BUILD_ROOT%
           C:\jom\jom.exe -j%NUMBER_OF_PROCESSORS%
           C:\jom\jom.exe -j%NUMBER_OF_PROCESSORS% install          
