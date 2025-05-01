@@ -1,6 +1,10 @@
 name: Qt-GammaRay Builds
 on: [push, pull_request, workflow_dispatch]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+  
 jobs:
   GammaRay-x64:
     runs-on: windows-2019
@@ -40,23 +44,21 @@ jobs:
           key: ${{ github.job }}-qt-${{ hashFiles('msbuild_version', 'qt_version', 'cache_seed') }}           
       - name: Clone Qt ${{ env.CI_QT_VERSION }}
         if: steps.qt-cache.outputs.cache-hit != 'true'
-        shell: cmd
-        run: |
-          @echo on
-          C:
-          mkdir C:\Qt\src\
-          cd C:\Qt\src\
-          git clone -b v${{ env.CI_QT_VERSION }} https://code.qt.io/qt/qt5.git ${env.CI_QT_VERSION}
-          cd C:\Qt\src\${env.CI_QT_VERSION}\
-          git submodule update --init --recursive
+        uses: actions/checkout@v4
+        with:
+          repository: https://code.qt.io/qt/qt5.git
+          ref: v${{ env.CI_QT_VERSION }}
+          fetch-depth: 1
+          submodules: recursive
+          path: C:\Qt\src\${{ env.CI_QT_VERSION }}
       - name: Clone latest Qt-GammaRay
         if: steps.qt-cache.outputs.cache-hit != 'true'
-        shell: cmd
-        run: |
-          @echo on
-          C:
-          cd C:\
-          git clone https://github.com/KDAB/GammaRay.git    
+        uses: actions/checkout@v4
+        with:
+          repository: KDAB/GammaRay
+          path: C:\GammaRay
+          fetch-depth: 1
+          submodules: recursive
       - name: Build Qt ${{ env.CI_QT_VERSION }}
         if: steps.qt-cache.outputs.cache-hit != 'true'      
         shell: cmd
