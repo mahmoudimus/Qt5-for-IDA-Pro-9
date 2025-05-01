@@ -6,6 +6,7 @@ jobs:
     runs-on: windows-latest
     env:
       CI_QT_VERSION: 5.15.2
+      IDA_VERSION: 8.4
       CI_SEED: 1234567890  # cache buster
     steps:
       - name: Enable Developer Command Prompt (Windows)
@@ -53,13 +54,7 @@ jobs:
           @echo on
           C:
           cd C:\
-          git clone https://github.com/KDAB/GammaRay.git
-      - name: Save Qt cache
-        if: steps.qt-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v3
-        with:
-          path: C:\Qt
-          key: ${{ github.job }}-qt-${{ hashFiles('msbuild_version', 'qt_version', 'cache_seed') }}              
+          git clone https://github.com/KDAB/GammaRay.git    
       - name: Build Qt 5.15.2
         shell: cmd
         run: |
@@ -68,14 +63,27 @@ jobs:
           set _ROOT=C:\Qt\build\5.15.2
           set PATH=%_ROOT%\qtrepotools\bin;%_ROOT%\qtbase\bin;%_ROOT%\gnuwin32\bin;%PATH%
           set _ROOT=
-          mkdir C:\Qt\artifacts\5.15.2
           mkdir C:\Qt\build\5.15.2\
+          mkdir C:\Qt\build\5.15.2\qtbase\
           cd C:\Qt\build\5.15.2\
-          call C:\Qt\src\5.15.2\configure.bat -release -nomake tests -nomake examples -qtnamespace QT -confirm-license -accessibility -opensource -platform win32-msvc -opengl desktop -prefix C:\Qt\artifacts\5.15.2
+          REM See https://bugreports.qt.io/browse/QTBUG-71540 for Qt 5.15.2 build issues on Windows
+          call C:\Qt\src\5.15.2\configure.bat -release -nomake tests -nomake examples -qtnamespace QT -confirm-license -accessibility -opensource -platform win32-msvc -opengl desktop -prefix C:\Qt\build\5.15.2\qtbase
           cd C:\Qt\build\5.15.2\
           C:\jom\jom.exe -j%NUMBER_OF_PROCESSORS%
           C:\jom\jom.exe -j%NUMBER_OF_PROCESSORS% install
-          
+      - name: Save Qt cache
+        uses: actions/cache/save@v3
+        with:
+          path: C:\Qt
+          key: ${{ github.job }}-qt-${{ hashFiles('msbuild_version', 'qt_version', 'cache_seed') }}          
+      - name: Build Qt GammaRay
+        shell: cmd
+        run: |
+          @echo on
+          C:
+          set _ROOT=C:\Qt\build\5.15.2
+          set PATH=%_ROOT%\qtrepotools\bin;%_ROOT%\qtbase\bin;%_ROOT%\gnuwin32\bin;%PATH%
+          set _ROOT=        
           mkdir C:\artifacts\
           mkdir C:\GammaRay\build\
           cd C:\GammaRay\build\
@@ -92,5 +100,5 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: qt-GammaRay-x64-for-ida.zip
+          name: Qt-GammaRay-x64-for-IDA-${{ env.IDA_VERSION }}-Qt-${{ env.CI_QT_VERSION }}.zip
           path: C:\artifacts
